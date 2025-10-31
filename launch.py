@@ -1,3 +1,11 @@
+import multiprocessing
+try:
+    multiprocessing.set_start_method("fork", force=True)
+except RuntimeError:
+    # Start method was already set
+    pass
+
+
 from configparser import ConfigParser
 from argparse import ArgumentParser
 
