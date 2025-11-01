@@ -1,6 +1,8 @@
 import os
 import re
 import hashlib
+import atexit
+import report_stats
 from urllib.parse import urlparse, urljoin, urldefrag, urlunparse
 from bs4 import BeautifulSoup
 
@@ -51,6 +53,14 @@ MAX_QUERY_PAIRS = 10
 SAVE_HTML = True
 SAVE_DIR  = "/tmp/uci_pages"
 MANIFEST_PATH = os.path.join(SAVE_DIR, "manifest.tsv")
+
+def _on_exit():
+    try:
+        report_stats.main()
+    except Exception as e:
+        print(f"[warn] report generation failed: {e}")
+
+atexit.register(_on_exit)
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
