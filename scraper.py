@@ -48,8 +48,9 @@ MIN_TEXT_LEN    = 200
 MAX_URL_LEN     = 2000
 MAX_PATH_DEPTH  = 15
 MAX_QUERY_PAIRS = 10
-SAVE_HTML = False
+SAVE_HTML = True
 SAVE_DIR  = "/tmp/uci_pages"
+MANIFEST_PATH = os.path.join(SAVE_DIR, "manifest.tsv")
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -91,11 +92,13 @@ def extract_next_links(url, resp):
     try:
         text = soup.get_text(separator=" ", strip=True)
         if len(text) < MIN_TEXT_LEN:
+            if SAVE_HTML:
+                _save_html_and_manifest(url, soup)
             return _dedup(out)
     except Exception:
         pass
     if SAVE_HTML:
-        _maybe_save(url, soup)
+        _save_html_and_manifest(url, soup)
     return _dedup(out)
 
 def _dedup(urls):
@@ -129,12 +132,14 @@ def _normalize_url(u: str) -> str:
         path = path.rstrip("/")
     return urlunparse((p.scheme, host + port, path, "", p.query, ""))
 
-def _maybe_save(url, soup):
+def _save_html_and_manifest(url, soup):
     try:
         os.makedirs(SAVE_DIR, exist_ok=True)
         h = hashlib.sha1(url.encode("utf-8")).hexdigest()
         with open(os.path.join(SAVE_DIR, f"{h}.html"), "w", encoding="utf-8", errors="ignore") as f:
             f.write(str(soup))
+        with open(MANIFEST_PATH, "a", encoding="utf-8", errors="ignore") as m:
+            m.write(f"{h}\t{url}\n")
     except Exception:
         pass
 
