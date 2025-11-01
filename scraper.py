@@ -63,6 +63,14 @@ def extract_next_links(url, resp):
             abs_url = abs_url.strip()
 
             if abs_url:
+                # skip same pages
+                if abs_url == resp.url or abs_url == url:
+                    continue
+
+                # /page vs /page/
+                if abs_url.rstrip('/') == (resp.url or url).rstrip('/'):
+                    continue
+
                 links.add(abs_url)
 
     except Exception as e:
@@ -122,17 +130,10 @@ def is_valid(url):
 
         # filter any login pages
         if any(login_path in path_lower for login_path in [
-            "/wp-login.php",
-            "/wp-admin",
-            "/xmlrpc.php",
-            "/wp-content/plugins",
-            "/wp-json",
-            "/wp-includes",
-            "/administrator",
-            "/joomla/login",
-            "/user/login",
-            "/user/register",
-            "/user/password",
+            "/wp-login.php", "/wp-admin", "/xmlrpc.php",
+            "/wp-content/plugins", "/wp-json", "/wp-includes",
+            "/administrator", "/joomla/login", "/user/login",
+            "/user/register","/user/password",
         ]):
             return False
 
@@ -156,6 +157,33 @@ def is_valid(url):
         if path.count("/") > 15:
             return False
         if re.search(r"/calendar|/events?/|~eppstein/pix|fano\.ics\.uci\.edu/ca/rules", path.lower()):
+            return False
+
+        # filters many different versions of the same page
+        if any(param in parsed.query.lower() for param in [
+            "version=", "diff=", "action=diff", "format=txt",
+            "from=", "precision=", "sort=", "order=",
+        ]):
+            return False
+
+        # blocks wiki/timline patterns found in grape.ics.uci.edu
+        if re.search(r"/timeline", path_lower):
+            return False
+        if re.search(r"/wiki/.+(\?|&)version=", url.lower()):
+            return False
+        if re.search(r"/wiki/.+(\?|&)action=diff", url.lower()):
+            return False
+
+        # filters social media links
+        if re.search(r'\?share=(facebook|twitter|linkedin)', url.lower()):
+            return False
+        
+        #filters redirectors
+        if re.search(r'/r\.php\?next=', url.lower()):
+            return False
+
+        # filter Doku traps
+        if '/doku.php' in path_lower:
             return False
 
         return True
