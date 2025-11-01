@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urldefrag
 def scraper(url, resp):
     # extract raw links
     links = extract_next_links(url, resp)
-    print(links)
+
     # filter them
     valid_links = [link for link in links if is_valid(link)]
 
@@ -89,11 +89,6 @@ BLOCKED_EXT_RE = re.compile(
     r"|epub|dll|cnf|tgz|sha1"
     r"|thmx|mso|arff|rtf|jar|csv"
     r"|rm|smil|wmv|swf|wma|zip|rar|gz)$"
-)
-
-BLOCKED_PATH_RE = re.compile(
-    r"(/event?/|~eppstein/pix|fano\.ics\.uci\.edu/ca/rules)",
-    re.IGNORECASE
 )
 
 def is_valid(url):
