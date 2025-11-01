@@ -7,6 +7,7 @@ from urllib.parse import urljoin, urldefrag
 def scraper(url, resp):
     # extract raw links
     links = extract_next_links(url, resp)
+    print(links)
     # filter them
     valid_links = [link for link in links if is_valid(link)]
 
@@ -44,7 +45,10 @@ def extract_next_links(url, resp):
 
     try:
         body = resp.raw_response.content
-        soup = BeautifulSoup(body, "lxml")
+        try:
+            soup = BeautifulSoup(body, "lxml")
+        except Exception:
+            soup = BeautifulSoup(body, "html.parser")
 
         for a in soup.find_all("a", href=True):
             href = a.get("href")
@@ -65,7 +69,7 @@ def extract_next_links(url, resp):
         # If parsing fails, just return what we have
         # (Do not crash the crawler)
         # print(f"extract_next_links error at {url}: {e}")
-        pass
+        print(f"extract_next_links error at {url}: {e}")
 
     return list(links)
 
@@ -73,7 +77,7 @@ ALLOWED_NETLOCS = (
     ".ics.uci.edu",
     ".cs.uci.edu",
     ".informatics.uci.edu",
-    ".stat.uci.edu",
+    ".stat.uci.edu"
 )
 
 BLOCKED_EXT_RE = re.compile(
@@ -85,6 +89,11 @@ BLOCKED_EXT_RE = re.compile(
     r"|epub|dll|cnf|tgz|sha1"
     r"|thmx|mso|arff|rtf|jar|csv"
     r"|rm|smil|wmv|swf|wma|zip|rar|gz)$"
+)
+
+BLOCKED_PATH_RE = re.compile(
+    r"(/event?/|~eppstein/pix|fano\.ics\.uci\.edu/ca/rules)",
+    re.IGNORECASE
 )
 
 def is_valid(url):
@@ -116,6 +125,22 @@ def is_valid(url):
         if BLOCKED_EXT_RE.match(path_lower):
             return False
 
+        # filter any login pages
+        if any(login_path in path_lower for login_path in [
+            "/wp-login.php",
+            "/wp-admin",
+            "/xmlrpc.php",
+            "/wp-content/plugins",
+            "/wp-json",
+            "/wp-includes",
+            "/administrator",
+            "/joomla/login",
+            "/user/login",
+            "/user/register",
+            "/user/password",
+        ]):
+            return False
+
         # simple trap heuristics:
         # 1) very long URLs (likely session or repeated params)
         if len(url) > 2000:
@@ -135,7 +160,7 @@ def is_valid(url):
         path = parsed.path or ""
         if path.count("/") > 15:
             return False
-        if re.search(r"/calendar|/events", path.lower()):
+        if re.search(r"/calendar|/events?/|~eppstein/pix|fano\.ics\.uci\.edu/ca/rules", path.lower()):
             return False
 
         return True
