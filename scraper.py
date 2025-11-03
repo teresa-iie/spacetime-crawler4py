@@ -1,10 +1,16 @@
 import re
 import analytics
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urldefrag
 
 def scraper(url, resp):
+    url = normalize_url(url)
+
+    # prevent re-crawling already processed URLs
+    if url in analytics._unique_pages:
+        return []
+
     # extract raw links
     links = extract_next_links(url, resp)
     # filter them
@@ -14,6 +20,8 @@ def scraper(url, resp):
     if resp and resp.status == 200 and resp.raw_response:
         try:
             tokens = extract_text_tokens(resp.raw_response.content)
+            if len(tokens) < 50:
+                return valid_links
             analytics.record_page(url, tokens)
             # print(f"Extracted {len(tokens)} tokens from {url}")
         except Exception as e:
@@ -42,12 +50,21 @@ def extract_next_links(url, resp):
     if "html" not in content_type.lower():
         return []
 
+    # prevent pages that are too huge(prevent crawler crash)
+    length = resp.raw_response.headers.get("Content-Length")
+    if length and int(length) > 2_500_000:
+        return []
+
     try:
         body = resp.raw_response.content
         soup = BeautifulSoup(body, "lxml")
 
         for a in soup.find_all("a", href=True):
             href = a.get("href")
+
+            # prevent going into not-targeted links
+            if href.startswith(("mailto:", "javascript:", "tel:")):
+                    continue
 
             # resolve relative URLs
             abs_url = urljoin(resp.url or url, href)
