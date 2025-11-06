@@ -192,12 +192,6 @@ def is_valid(url):
         print ("TypeError for ", parsed)
         raise
 
-'''uncomment these when server is up and running'''
-
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urldefrag
-from collections import Counter
-
 STOPWORDS = {
     "a","an","and","are","as","at","be","by","for","from","has","he","in","is","it",
     "its","of","on","that","the","to","was","were","will","with","this","these",
@@ -217,17 +211,3 @@ def extract_text_tokens(html_bytes):
             buf.append(" ")
     tokens = [w for w in "".join(buf).split() if w]
     return tokens
-
-def normalize_url(u):
-    u, _ = urldefrag(u)
-    return u.strip()
-
-def subdomain_of(url):
-    host = urlparse(url).netloc.lower()
-    if host.endswith(".uci.edu"):
-        return host
-    return None
-
-def count_word_frequencies(tokens):
-    from collections import Counter
-    return Counter([t for t in tokens if t not in STOPWORDS])
